@@ -2,45 +2,152 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Capture avec webcam</title>
+  <title>Capture Webcam personnalisée</title>
   <style>
+    body {
+      font-family: sans-serif;
+      background-color: #f4f4f4;
+      text-align: center;
+      padding: 20px;
+    }
     video, canvas {
-      display: block;
       margin: 10px auto;
-      border: 2px solid #333;
+      border: 2px solid #444;
       border-radius: 10px;
+      display: block;
+    }
+    .control-group {
+      margin-bottom: 15px;
+    }
+    input[type=range] {
+      width: 200px;
+      vertical-align: middle;
+    }
+    input[type=number] {
+      width: 80px;
+      margin-left: 10px;
+      padding: 5px;
+      font-size: 14px;
+    }
+    .dimensions {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 20px;
     }
     button {
-      display: block;
-      margin: 10px auto;
+      margin: 10px;
       padding: 10px 20px;
       font-size: 16px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <h2 style="text-align:center;">Capture d’image depuis la webcam</h2>
-  <video id="video" width="400" autoplay></video>
-  <button id="capture">📸 Prendre une photo</button>
-  <canvas id="canvas" width="400" height="300"></canvas>
+  <h2>📸 Capture webcam avec sliders + chiffres</h2>
+
+  <div class="control-group">
+    <label>Largeur :
+      <input type="range" id="widthSlider" min="200" max="800" value="400">
+      <input type="number" id="widthInput" min="200" max="800" value="400">
+    </label>
+  </div>
+
+  <div class="control-group">
+    <label>Hauteur :
+      <input type="range" id="heightSlider" min="200" max="600" value="300">
+      <input type="number" id="heightInput" min="200" max="600" value="300">
+    </label>
+  </div>
+
+  <p class="dimensions">Prévisualisation : <span id="dimDisplay">400 x 300</span></p>
+
+  <video id="video" autoplay playsinline></video>
+  <canvas id="canvas" style="display:none;"></canvas>
+
+  <div>
+    <button id="capture">📷 Prendre une photo</button>
+    <button id="restart" style="display:none;">🔁 Reprendre</button>
+    <button id="download" style="display:none;">💾 Télécharger</button>
+  </div>
 
   <script>
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
-    const context = canvas.getContext('2d');
-    const captureButton = document.getElementById('capture');
+    const ctx = canvas.getContext('2d');
+    const captureBtn = document.getElementById('capture');
+    const restartBtn = document.getElementById('restart');
+    const downloadBtn = document.getElementById('download');
 
-    // Demande l'accès à la webcam
-    navigator.mediaDevices.getUserMedia({ video: true })
-      .then(stream => {
-        video.srcObject = stream;
-      })
-      .catch(err => {
-        alert("Erreur d'accès à la webcam : " + err);
-      });
+    const widthSlider = document.getElementById('widthSlider');
+    const widthInput = document.getElementById('widthInput');
+    const heightSlider = document.getElementById('heightSlider');
+    const heightInput = document.getElementById('heightInput');
+    const dimDisplay = document.getElementById('dimDisplay');
 
-    captureButton.addEventListener('click', () => {
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    let stream;
+
+    async function startCamera() {
+      stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      video.srcObject = stream;
+    }
+
+    function syncDimensions(source) {
+      const width = parseInt(widthSlider.value);
+      const height = parseInt(heightSlider.value);
+
+      if (source === 'slider') {
+        widthInput.value = widthSlider.value;
+        heightInput.value = heightSlider.value;
+      } else {
+        widthSlider.value = widthInput.value;
+        heightSlider.value = heightInput.value;
+      }
+
+      video.width = width;
+      video.height = height;
+      dimDisplay.textContent = `${width} x ${height}`;
+    }
+
+    // Synchronisation sliders ↔ champs numériques
+    widthSlider.addEventListener('input', () => syncDimensions('slider'));
+    heightSlider.addEventListener('input', () => syncDimensions('slider'));
+    widthInput.addEventListener('input', () => syncDimensions('input'));
+    heightInput.addEventListener('input', () => syncDimensions('input'));
+
+    captureBtn.onclick = () => {
+      const width = parseInt(widthSlider.value);
+      const height = parseInt(heightSlider.value);
+      canvas.width = width;
+      canvas.height = height;
+
+      ctx.drawImage(video, 0, 0, width, height);
+
+      video.style.display = 'none';
+      canvas.style.display = 'block';
+      captureBtn.style.display = 'none';
+      restartBtn.style.display = 'inline-block';
+      downloadBtn.style.display = 'inline-block';
+    };
+
+    restartBtn.onclick = () => {
+      video.style.display = 'block';
+      canvas.style.display = 'none';
+      captureBtn.style.display = 'inline-block';
+      restartBtn.style.display = 'none';
+      downloadBtn.style.display = 'none';
+    };
+
+    downloadBtn.onclick = () => {
+      const image = canvas.toDataURL("image/png");
+      const link = document.createElement('a');
+      link.download = 'photo.png';
+      link.href = image;
+      link.click();
+    };
+
+    window.addEventListener('load', () => {
+      startCamera();
+      syncDimensions('slider');
     });
   </script>
 </body>
