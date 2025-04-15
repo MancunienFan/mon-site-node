@@ -20,3 +20,17 @@ button {
 button:hover {
   background-color: #0056b3;
 }
+
+#gallery img {
+  width: 150px;
+  height: auto;
+  border-radius: 10px;
+  cursor: zoom-in;
+  transition: transform 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+#gallery img.zoomed {
+  transform: scale(2.5);
+  z-index: 1000;
+  position: relative;
+}

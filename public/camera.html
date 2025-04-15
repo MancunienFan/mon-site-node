@@ -2,53 +2,51 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Studio Photo Web 📷</title>
+  <title>📷 Studio Photo Avancé</title>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(to right, #f9f9f9, #e0e0e0);
+      background: #f0f0f5;
       padding: 20px;
       text-align: center;
-    }
-    h2 {
-      margin-bottom: 10px;
-      color: #333;
     }
     .video-container {
       position: relative;
       display: inline-block;
+      border: 10px solid #444;
       border-radius: 20px;
       overflow: hidden;
-      box-shadow: 0 0 15px rgba(0,0,0,0.15);
-      margin-bottom: 15px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      margin-bottom: 20px;
     }
     video, canvas {
       max-width: 100%;
-      border-radius: 20px;
+      border-radius: 10px;
     }
-    .controls, .filters {
+    .controls {
       margin: 20px auto;
-      width: 80%;
       max-width: 600px;
       text-align: left;
     }
     .control {
-      margin: 10px 0;
+      margin: 12px 0;
     }
     label {
       display: inline-block;
       width: 130px;
     }
     input[type=range] {
-      width: 200px;
-      vertical-align: middle;
+      width: 180px;
     }
     input[type=number] {
       width: 60px;
       margin-left: 10px;
     }
+    select {
+      margin-left: 10px;
+    }
     button {
-      margin: 10px 5px;
+      margin: 12px 5px;
       padding: 10px 20px;
       font-size: 16px;
       border: none;
@@ -64,14 +62,14 @@
   </style>
 </head>
 <body>
-  <h2>🎥 Prendre une photo avec réglages</h2>
+  <h2>🎨 Studio Photo avec Effets</h2>
 
   <div class="video-container">
     <video id="video" autoplay playsinline></video>
     <canvas id="canvas" style="display:none;"></canvas>
   </div>
 
-  <!-- Réglages dimensions -->
+  <!-- Dimensions -->
   <div class="controls">
     <div class="control">
       <label>Largeur (px)</label>
@@ -86,7 +84,7 @@
   </div>
 
   <!-- Réglages filtres -->
-  <div class="filters">
+  <div class="controls">
     <div class="control">
       <label>Luminosité (%)</label>
       <input type="range" id="brightness" min="50" max="200" value="100">
@@ -98,9 +96,18 @@
       <input type="number" id="contrastNum" min="50" max="200" value="100">
     </div>
     <div class="control">
-      <label>Exposition simulée (%)</label>
+      <label>Exposition (%)</label>
       <input type="range" id="exposure" min="0" max="100" value="0">
       <input type="number" id="exposureNum" min="0" max="100" value="0">
+    </div>
+    <div class="control">
+      <label>Filtre spécial</label>
+      <select id="filterSelect">
+        <option value="none">Aucun</option>
+        <option value="grayscale(100%)">Noir & blanc</option>
+        <option value="sepia(100%)">Sépia</option>
+        <option value="mirror">Effet miroir</option>
+      </select>
     </div>
   </div>
 
@@ -109,16 +116,13 @@
     <button id="capture">📸 Capturer</button>
     <button id="restart" style="display:none;">🔁 Recommencer</button>
     <button id="download" style="display:none;">💾 Télécharger</button>
+    
   </div>
 
   <script>
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
-
-    const captureBtn = document.getElementById('capture');
-    const restartBtn = document.getElementById('restart');
-    const downloadBtn = document.getElementById('download');
 
     const widthSlider = document.getElementById('widthSlider');
     const widthInput = document.getElementById('widthInput');
@@ -131,6 +135,11 @@
     const contrastNum = document.getElementById('contrastNum');
     const exposure = document.getElementById('exposure');
     const exposureNum = document.getElementById('exposureNum');
+    const filterSelect = document.getElementById('filterSelect');
+
+    const captureBtn = document.getElementById('capture');
+    const restartBtn = document.getElementById('restart');
+    const downloadBtn = document.getElementById('download');
 
     function sync(slider, input, callback) {
       slider.addEventListener('input', () => {
@@ -143,12 +152,16 @@
       });
     }
 
-    function updateFilters() {
-      const b = brightness.value;
-      const c = contrast.value;
-      const e = exposure.value;
-      const simulatedExposure = 100 + parseInt(e);
-      video.style.filter = `brightness(${b}%) contrast(${c}%) brightness(${simulatedExposure}%)`;
+    function updateVideoFilters() {
+      let base = `brightness(${brightness.value}%) contrast(${contrast.value}%) brightness(${100 + parseInt(exposure.value)}%)`;
+      const extra = filterSelect.value;
+      if (extra === 'mirror') {
+        video.style.transform = 'scaleX(-1)';
+      } else {
+        video.style.transform = 'none';
+        if (extra !== 'none') base += ` ${extra}`;
+      }
+      video.style.filter = base;
     }
 
     function updateDimensions() {
@@ -158,9 +171,10 @@
 
     sync(widthSlider, widthInput, updateDimensions);
     sync(heightSlider, heightInput, updateDimensions);
-    sync(brightness, brightnessNum, updateFilters);
-    sync(contrast, contrastNum, updateFilters);
-    sync(exposure, exposureNum, updateFilters);
+    sync(brightness, brightnessNum, updateVideoFilters);
+    sync(contrast, contrastNum, updateVideoFilters);
+    sync(exposure, exposureNum, updateVideoFilters);
+    filterSelect.addEventListener('change', updateVideoFilters);
 
     async function startCamera() {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -170,12 +184,21 @@
     captureBtn.onclick = () => {
       const width = parseInt(widthSlider.value);
       const height = parseInt(heightSlider.value);
-
       canvas.width = width;
       canvas.height = height;
 
       ctx.filter = video.style.filter;
+
+      if (filterSelect.value === 'mirror') {
+        ctx.translate(width, 0);
+        ctx.scale(-1, 1);
+      }
+
       ctx.drawImage(video, 0, 0, width, height);
+
+      if (filterSelect.value === 'mirror') {
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+      }
 
       video.style.display = 'none';
       canvas.style.display = 'block';
@@ -204,7 +227,7 @@
     window.addEventListener('load', () => {
       startCamera();
       updateDimensions();
-      updateFilters();
+      updateVideoFilters();
     });
   </script>
 </body>
