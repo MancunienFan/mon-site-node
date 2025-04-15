@@ -1,17 +1,15 @@
 const express = require('express');
 const app = express();
-const path = require('path');
-const port = 3000;
+const PORT = process.env.PORT || 3000;
 
-// Sert les fichiers statiques (HTML, CSS, JS)
-app.use(express.static(path.join(__dirname, 'public')));
+// Sert les fichiers HTML/CSS/JS du dossier public
+app.use(express.static('public'));
 
-// Route pour afficher la page web
+// Route principale
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.send('<h1>Bienvenue sur mon site Node.js !</h1><p><a href="/camera.html">📷 Utiliser la webcam</a></p>');
 });
 
-// Lancer le serveur sur le port 3000
-app.listen(port, () => {
-  console.log(`Serveur en écoute sur http://localhost:${port}`);
+app.listen(PORT, () => {
+  console.log(`Serveur en ligne sur http://localhost:${PORT}`);
 });
