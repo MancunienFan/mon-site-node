@@ -2,71 +2,112 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Capture Webcam personnalisée</title>
+  <title>Studio Photo Web 📷</title>
   <style>
     body {
-      font-family: sans-serif;
-      background-color: #f4f4f4;
-      text-align: center;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #f9f9f9, #e0e0e0);
       padding: 20px;
+      text-align: center;
+    }
+    h2 {
+      margin-bottom: 10px;
+      color: #333;
+    }
+    .video-container {
+      position: relative;
+      display: inline-block;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 0 15px rgba(0,0,0,0.15);
+      margin-bottom: 15px;
     }
     video, canvas {
-      margin: 10px auto;
-      border: 2px solid #444;
-      border-radius: 10px;
-      display: block;
+      max-width: 100%;
+      border-radius: 20px;
     }
-    .control-group {
-      margin-bottom: 15px;
+    .controls, .filters {
+      margin: 20px auto;
+      width: 80%;
+      max-width: 600px;
+      text-align: left;
+    }
+    .control {
+      margin: 10px 0;
+    }
+    label {
+      display: inline-block;
+      width: 130px;
     }
     input[type=range] {
       width: 200px;
       vertical-align: middle;
     }
     input[type=number] {
-      width: 80px;
+      width: 60px;
       margin-left: 10px;
-      padding: 5px;
-      font-size: 14px;
-    }
-    .dimensions {
-      font-size: 18px;
-      font-weight: bold;
-      margin-bottom: 20px;
     }
     button {
-      margin: 10px;
+      margin: 10px 5px;
       padding: 10px 20px;
       font-size: 16px;
+      border: none;
+      background: #007bff;
+      color: white;
+      border-radius: 8px;
       cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #0056b3;
     }
   </style>
 </head>
 <body>
-  <h2>📸 Capture webcam avec sliders + chiffres</h2>
+  <h2>🎥 Prendre une photo avec réglages</h2>
 
-  <div class="control-group">
-    <label>Largeur :
+  <div class="video-container">
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas" style="display:none;"></canvas>
+  </div>
+
+  <!-- Réglages dimensions -->
+  <div class="controls">
+    <div class="control">
+      <label>Largeur (px)</label>
       <input type="range" id="widthSlider" min="200" max="800" value="400">
       <input type="number" id="widthInput" min="200" max="800" value="400">
-    </label>
-  </div>
-
-  <div class="control-group">
-    <label>Hauteur :
+    </div>
+    <div class="control">
+      <label>Hauteur (px)</label>
       <input type="range" id="heightSlider" min="200" max="600" value="300">
       <input type="number" id="heightInput" min="200" max="600" value="300">
-    </label>
+    </div>
   </div>
 
-  <p class="dimensions">Prévisualisation : <span id="dimDisplay">400 x 300</span></p>
+  <!-- Réglages filtres -->
+  <div class="filters">
+    <div class="control">
+      <label>Luminosité (%)</label>
+      <input type="range" id="brightness" min="50" max="200" value="100">
+      <input type="number" id="brightnessNum" min="50" max="200" value="100">
+    </div>
+    <div class="control">
+      <label>Contraste (%)</label>
+      <input type="range" id="contrast" min="50" max="200" value="100">
+      <input type="number" id="contrastNum" min="50" max="200" value="100">
+    </div>
+    <div class="control">
+      <label>Exposition simulée (%)</label>
+      <input type="range" id="exposure" min="0" max="100" value="0">
+      <input type="number" id="exposureNum" min="0" max="100" value="0">
+    </div>
+  </div>
 
-  <video id="video" autoplay playsinline></video>
-  <canvas id="canvas" style="display:none;"></canvas>
-
+  <!-- Boutons -->
   <div>
-    <button id="capture">📷 Prendre une photo</button>
-    <button id="restart" style="display:none;">🔁 Reprendre</button>
+    <button id="capture">📸 Capturer</button>
+    <button id="restart" style="display:none;">🔁 Recommencer</button>
     <button id="download" style="display:none;">💾 Télécharger</button>
   </div>
 
@@ -74,6 +115,7 @@
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
+
     const captureBtn = document.getElementById('capture');
     const restartBtn = document.getElementById('restart');
     const downloadBtn = document.getElementById('download');
@@ -82,48 +124,62 @@
     const widthInput = document.getElementById('widthInput');
     const heightSlider = document.getElementById('heightSlider');
     const heightInput = document.getElementById('heightInput');
-    const dimDisplay = document.getElementById('dimDisplay');
 
-    let stream;
+    const brightness = document.getElementById('brightness');
+    const brightnessNum = document.getElementById('brightnessNum');
+    const contrast = document.getElementById('contrast');
+    const contrastNum = document.getElementById('contrastNum');
+    const exposure = document.getElementById('exposure');
+    const exposureNum = document.getElementById('exposureNum');
+
+    function sync(slider, input, callback) {
+      slider.addEventListener('input', () => {
+        input.value = slider.value;
+        callback();
+      });
+      input.addEventListener('input', () => {
+        slider.value = input.value;
+        callback();
+      });
+    }
+
+    function updateFilters() {
+      const b = brightness.value;
+      const c = contrast.value;
+      const e = exposure.value;
+      const simulatedExposure = 100 + parseInt(e);
+      video.style.filter = `brightness(${b}%) contrast(${c}%) brightness(${simulatedExposure}%)`;
+    }
+
+    function updateDimensions() {
+      video.width = widthSlider.value;
+      video.height = heightSlider.value;
+    }
+
+    sync(widthSlider, widthInput, updateDimensions);
+    sync(heightSlider, heightInput, updateDimensions);
+    sync(brightness, brightnessNum, updateFilters);
+    sync(contrast, contrastNum, updateFilters);
+    sync(exposure, exposureNum, updateFilters);
 
     async function startCamera() {
-      stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       video.srcObject = stream;
     }
-
-    function syncDimensions(source) {
-      const width = parseInt(widthSlider.value);
-      const height = parseInt(heightSlider.value);
-
-      if (source === 'slider') {
-        widthInput.value = widthSlider.value;
-        heightInput.value = heightSlider.value;
-      } else {
-        widthSlider.value = widthInput.value;
-        heightSlider.value = heightInput.value;
-      }
-
-      video.width = width;
-      video.height = height;
-      dimDisplay.textContent = `${width} x ${height}`;
-    }
-
-    // Synchronisation sliders ↔ champs numériques
-    widthSlider.addEventListener('input', () => syncDimensions('slider'));
-    heightSlider.addEventListener('input', () => syncDimensions('slider'));
-    widthInput.addEventListener('input', () => syncDimensions('input'));
-    heightInput.addEventListener('input', () => syncDimensions('input'));
 
     captureBtn.onclick = () => {
       const width = parseInt(widthSlider.value);
       const height = parseInt(heightSlider.value);
+
       canvas.width = width;
       canvas.height = height;
 
+      ctx.filter = video.style.filter;
       ctx.drawImage(video, 0, 0, width, height);
 
       video.style.display = 'none';
       canvas.style.display = 'block';
+
       captureBtn.style.display = 'none';
       restartBtn.style.display = 'inline-block';
       downloadBtn.style.display = 'inline-block';
@@ -147,7 +203,8 @@
 
     window.addEventListener('load', () => {
       startCamera();
-      syncDimensions('slider');
+      updateDimensions();
+      updateFilters();
     });
   </script>
 </body>
