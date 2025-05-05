@@ -61,6 +61,7 @@
     .controls input[type="number"],
     .controls input[type="file"],
     .controls input[type="range"],
+    .controls input[readonly],
     .controls button {
       font-size: 14px;
       padding: 6px;
@@ -75,7 +76,7 @@
       transition: background-color 0.2s ease-in-out;
     }
 
-    .controls button:hover {
+    .controls button:hover:enabled {
       background-color: #0056b3;
     }
 
@@ -89,6 +90,12 @@
       min-width: 30px;
       text-align: right;
       font-size: 13px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
     }
 
     @media (max-height: 800px) {
@@ -106,8 +113,17 @@
     <canvas id="canvas"></canvas>
 
     <div class="controls">
+      <label for="clientNom">👤 Nom :</label>
+      <input type="text" id="clientNom" readonly>
+
+      <label for="clientPrenom">👤 Prénom :</label>
+      <input type="text" id="clientPrenom" readonly>
+
       <label for="clientId">🆔 ID du dossier client :</label>
-      <input type="number" id="clientId" required placeholder="Entrez l'ID du client">
+      <div class="input-row">
+        <input type="number" id="clientId" required placeholder="Entrez l'ID du client">
+        <button id="btnRecherche" disabled>🔍 Rechercher</button>
+      </div>
 
       <label for="importPhoto">📂 Importer une photo :</label>
       <input type="file" id="importPhoto" accept="image/*">
@@ -144,7 +160,7 @@
         <input type="range" id="zoom" min="1" max="3" step="0.1" value="1">
       </div>
 
-      <button id="capture">📸 Prendre la photo</button>
+      <button id="capture" disabled>📸 Prendre la photo</button>
       <button id="restart" style="display:none;">🔄 Reprendre la photo</button>
       <button id="send">📤 Envoyer vers Oracle</button>
     </div>
@@ -167,12 +183,38 @@
   const zoomSlider = document.getElementById('zoom');
   const importInput = document.getElementById('importPhoto');
 
+  const clientIdInput = document.getElementById('clientId');
+  const clientNomInput = document.getElementById('clientNom');
+  const clientPrenomInput = document.getElementById('clientPrenom');
+  const btnRecherche = document.getElementById('btnRecherche');
+
+  clientIdInput.addEventListener('input', () => {
+    btnRecherche.disabled = !clientIdInput.value;
+  });
+
+  btnRecherche.addEventListener('click', async () => {
+    const clientId = clientIdInput.value;
+    if (!clientId) return;
+    try {
+      const response = await fetch(`/clients/${clientId}`);
+      if (!response.ok) throw new Error();
+      const data = await response.json();
+      clientNomInput.value = data.NM_CLI || '';
+      clientPrenomInput.value = data.PN_CLI || '';
+      captureButton.disabled = !(data.NM_CLI && data.PN_CLI);
+    } catch (error) {
+      clientNomInput.value = '';
+      clientPrenomInput.value = '';
+      captureButton.disabled = true;
+      alert("Client non trouvé. Veuillez vérifier l'ID saisi.");
+    }
+  });
+
   let currentBrightness = brightnessSlider.value;
   let currentContrast = contrastSlider.value;
   let currentExposure = exposureSlider.value;
   let currentZoom = zoomSlider.value;
 
-  // Met à jour la taille de la vidéo et de l'image d'aperçu
   const updateVideoSize = () => {
     const width = outputWidthInput.value + 'px';
     const height = outputHeightInput.value + 'px';
@@ -182,7 +224,6 @@
     photo.style.height = height;
   };
 
-  // Met à jour les effets visuels de la vidéo
   const updateVideoEffects = () => {
     const contrastValue = Number(currentContrast) + 100;
     const exposureValue = Number(currentExposure);
@@ -192,7 +233,6 @@
     video.style.transform = `scale(${currentZoom})`;
   };
 
-  // Écouteurs sliders
   [brightnessSlider, contrastSlider, exposureSlider, zoomSlider].forEach(slider => {
     slider.oninput = () => {
       currentBrightness = brightnessSlider.value;
@@ -203,7 +243,6 @@
     };
   });
 
-  // Sliders de largeur et hauteur
   outputWidthInput.oninput = () => {
     widthValue.textContent = outputWidthInput.value;
     updateVideoSize();
@@ -212,21 +251,16 @@
     heightValue.textContent = outputHeightInput.value;
     updateVideoSize();
   };
-
-  // Initialisation taille vidéo
   updateVideoSize();
 
-  // Démarrage webcam
   navigator.mediaDevices.getUserMedia({ video: true })
     .then(stream => video.srcObject = stream)
     .catch(err => console.error('Erreur caméra:', err));
 
-  // Capture photo
   captureButton.onclick = () => {
     const context = canvas.getContext('2d');
     const width = parseInt(outputWidthInput.value);
     const height = parseInt(outputHeightInput.value);
-
     canvas.width = width;
     canvas.height = height;
 
@@ -261,9 +295,8 @@
     restartButton.style.display = 'none';
   };
 
-  // Envoi vers Oracle
   sendButton.onclick = async () => {
-    const id = document.getElementById('clientId').value;
+    const id = clientIdInput.value;
     const dataUrl = photo.src;
 
     if (!id || !dataUrl) {
@@ -284,7 +317,6 @@
     alert(result);
   };
 
-  // Import d’image
   importInput.onchange = (event) => {
     const file = event.target.files[0];
     if (!file || !file.type.startsWith('image/')) {
@@ -300,14 +332,10 @@
 
       photo.src = e.target.result;
       photo.style.display = 'block';
-
-      // Taille cohérente avec les sliders
       updateVideoSize();
     };
     reader.readAsDataURL(file);
   };
 </script>
- 
-
 </body>
 </html>
