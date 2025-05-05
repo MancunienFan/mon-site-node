@@ -2,13 +2,238 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ma page Node.js</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>📷 Studio Photo Avancé</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f0f5;
+      padding: 20px;
+      text-align: center;
+    }
+    .video-container {
+      position: relative;
+      display: inline-block;
+      border: 10px solid #444;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      margin-bottom: 20px;
+    }
+    video, canvas {
+      max-width: 100%;
+      border-radius: 10px;
+    }
+    .controls {
+      margin: 20px auto;
+      max-width: 600px;
+      text-align: left;
+    }
+    .control {
+      margin: 12px 0;
+    }
+    label {
+      display: inline-block;
+      width: 130px;
+    }
+    input[type=range] {
+      width: 180px;
+    }
+    input[type=number] {
+      width: 60px;
+      margin-left: 10px;
+    }
+    select {
+      margin-left: 10px;
+    }
+    button {
+      margin: 12px 5px;
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      background: #007bff;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+  </style>
 </head>
 <body>
-  <h1>Bienvenue sur ma page web avec Node.js !</h1>
-  <button id="myButton">Cliquez-moi</button>
-  <script src="script.js"></script>
+  <h2>🎨 Studio Photo avec Effets</h2>
+
+  <div class="video-container">
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas" style="display:none;"></canvas>
+  </div>
+
+  <!-- Dimensions -->
+  <div class="controls">
+    <div class="control">
+      <label>Largeur (px)</label>
+      <input type="range" id="widthSlider" min="200" max="800" value="400">
+      <input type="number" id="widthInput" min="200" max="800" value="400">
+    </div>
+    <div class="control">
+      <label>Hauteur (px)</label>
+      <input type="range" id="heightSlider" min="200" max="600" value="300">
+      <input type="number" id="heightInput" min="200" max="600" value="300">
+    </div>
+  </div>
+
+  <!-- Réglages filtres -->
+  <div class="controls">
+    <div class="control">
+      <label>Luminosité (%)</label>
+      <input type="range" id="brightness" min="50" max="200" value="100">
+      <input type="number" id="brightnessNum" min="50" max="200" value="100">
+    </div>
+    <div class="control">
+      <label>Contraste (%)</label>
+      <input type="range" id="contrast" min="50" max="200" value="100">
+      <input type="number" id="contrastNum" min="50" max="200" value="100">
+    </div>
+    <div class="control">
+      <label>Exposition (%)</label>
+      <input type="range" id="exposure" min="0" max="100" value="0">
+      <input type="number" id="exposureNum" min="0" max="100" value="0">
+    </div>
+    <div class="control">
+      <label>Filtre spécial</label>
+      <select id="filterSelect">
+        <option value="none">Aucun</option>
+        <option value="grayscale(100%)">Noir & blanc</option>
+        <option value="sepia(100%)">Sépia</option>
+        <option value="mirror">Effet miroir</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Boutons -->
+  <div>
+    <button id="capture">📸 Capturer</button>
+    <button id="restart" style="display:none;">🔁 Recommencer</button>
+    <button id="download" style="display:none;">💾 Télécharger</button>
+    
+  </div>
+  <div style="margin-top: 1em;">
+    <label for="clientId">ID Client :</label>
+    <input type="number" id="clientId" required min="1" />
+    
+    <button id="sendPhotoBtn">📤 Envoyer</button>
+  </div>
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    const widthSlider = document.getElementById('widthSlider');
+    const widthInput = document.getElementById('widthInput');
+    const heightSlider = document.getElementById('heightSlider');
+    const heightInput = document.getElementById('heightInput');
+
+    const brightness = document.getElementById('brightness');
+    const brightnessNum = document.getElementById('brightnessNum');
+    const contrast = document.getElementById('contrast');
+    const contrastNum = document.getElementById('contrastNum');
+    const exposure = document.getElementById('exposure');
+    const exposureNum = document.getElementById('exposureNum');
+    const filterSelect = document.getElementById('filterSelect');
+
+    const captureBtn = document.getElementById('capture');
+    const restartBtn = document.getElementById('restart');
+    const downloadBtn = document.getElementById('download');
+
+    function sync(slider, input, callback) {
+      slider.addEventListener('input', () => {
+        input.value = slider.value;
+        callback();
+      });
+      input.addEventListener('input', () => {
+        slider.value = input.value;
+        callback();
+      });
+    }
+
+    function updateVideoFilters() {
+      let base = `brightness(${brightness.value}%) contrast(${contrast.value}%) brightness(${100 + parseInt(exposure.value)}%)`;
+      const extra = filterSelect.value;
+      if (extra === 'mirror') {
+        video.style.transform = 'scaleX(-1)';
+      } else {
+        video.style.transform = 'none';
+        if (extra !== 'none') base += ` ${extra}`;
+      }
+      video.style.filter = base;
+    }
+
+    function updateDimensions() {
+      video.width = widthSlider.value;
+      video.height = heightSlider.value;
+    }
+
+    sync(widthSlider, widthInput, updateDimensions);
+    sync(heightSlider, heightInput, updateDimensions);
+    sync(brightness, brightnessNum, updateVideoFilters);
+    sync(contrast, contrastNum, updateVideoFilters);
+    sync(exposure, exposureNum, updateVideoFilters);
+    filterSelect.addEventListener('change', updateVideoFilters);
+
+    async function startCamera() {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      video.srcObject = stream;
+    }
+
+    captureBtn.onclick = () => {
+      const width = parseInt(widthSlider.value);
+      const height = parseInt(heightSlider.value);
+      canvas.width = width;
+      canvas.height = height;
+
+      ctx.filter = video.style.filter;
+
+      if (filterSelect.value === 'mirror') {
+        ctx.translate(width, 0);
+        ctx.scale(-1, 1);
+      }
+
+      ctx.drawImage(video, 0, 0, width, height);
+
+      if (filterSelect.value === 'mirror') {
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+      }
+
+      video.style.display = 'none';
+      canvas.style.display = 'block';
+
+      captureBtn.style.display = 'none';
+      restartBtn.style.display = 'inline-block';
+      downloadBtn.style.display = 'inline-block';
+    };
+
+    restartBtn.onclick = () => {
+      video.style.display = 'block';
+      canvas.style.display = 'none';
+      captureBtn.style.display = 'inline-block';
+      restartBtn.style.display = 'none';
+      downloadBtn.style.display = 'none';
+    };
+
+    downloadBtn.onclick = () => {
+      const image = canvas.toDataURL("image/png");
+      const link = document.createElement('a');
+      link.download = 'photo.png';
+      link.href = image;
+      link.click();
+    };
+
+    window.addEventListener('load', () => {
+      startCamera();
+      updateDimensions();
+      updateVideoFilters();
+    });
+  </script>
 </body>
 </html>

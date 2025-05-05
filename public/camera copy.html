@@ -1,0 +1,67 @@
+<!-- camera.html -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Caméra avec Photo</title>
+  <style>
+    video, canvas, img { border: 1px solid black; max-width: 100%; }
+    .controls { margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Prendre une Photo</h1>
+  <video id="video" autoplay></video>
+  <canvas id="canvas" style="display:none;"></canvas>
+  <div class="controls">
+    <label for="clientId">ID du dossier client :</label>
+    <input type="number" id="clientId" required>
+    <button id="capture">Prendre la photo</button>
+    <button id="send">Envoyer vers Oracle</button>
+  </div>
+  <div>
+    <h3>Photo prise :</h3>
+    <img id="photo" src="">
+  </div>
+
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const photo = document.getElementById('photo');
+    const captureButton = document.getElementById('capture');
+    const sendButton = document.getElementById('send');
+
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => video.srcObject = stream)
+      .catch(err => console.error('Erreur caméra:', err));
+
+    captureButton.onclick = () => {
+      const context = canvas.getContext('2d');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0);
+      const dataUrl = canvas.toDataURL('image/jpeg');
+      photo.src = dataUrl;
+    };
+
+    sendButton.onclick = async () => {
+      const id = document.getElementById('clientId').value;
+      const dataUrl = photo.src;
+
+      if (!id || !dataUrl) {
+        alert("ID ou image manquants.");
+        return;
+      }
+
+      const response = await fetch('/envoyer-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, image: dataUrl, lang: 'FR' })
+      });
+
+      const result = await response.text();
+      alert(result);
+    };
+  </script>
+</body>
+</html>
