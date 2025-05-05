@@ -26,7 +26,7 @@ app.listen(PORT, () => {
 const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
-const { enregistrerPhoto } = require('./public/oracle/clientDB');
+const { enregistrerPhoto } = require('./oracle/clientDB');
 
 const app = express();
 app.use(bodyParser.json({ limit: '20mb' }));
@@ -43,6 +43,23 @@ app.post('/envoyer-photo', async (req, res) => {
     res.status(500).send('❌ Erreur lors de l\'enregistrement : ' + error.message);
   }
 });
+
+app.get('/clients/:id', async (req, res) => {
+  const clientId = req.params.id;
+
+  try {
+    const client = await getNomPrenomClient(clientId); // Fonction à créer
+    if (client) {
+      res.json(client);
+    } else {
+      res.status(404).send({ message: 'Client non trouvé' });
+    }
+  } catch (error) {
+    console.error('Erreur Oracle (recherche client) :', error);
+    res.status(500).send({ message: 'Erreur serveur', error: error.message });
+  }
+});
+
 
 const PORT = 3000;
 app.listen(PORT, () => {

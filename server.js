@@ -26,13 +26,12 @@ app.listen(PORT, () => {
 const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
-const { enregistrerPhoto } = require('./public/oracle/clientDB');
 
 const app = express();
 app.use(bodyParser.json({ limit: '20mb' }));
 app.use(express.static('public'));
 
-const { enregistrerPhotoDansCOUTCLI } = require('./public/oracle/clientDB');
+const { enregistrerPhotoDansCOUTCLI } = require('.//oracle//clientDB');
 
 app.post('/envoyer-photo', async (req, res) => {
   const { id, image } = req.body;
@@ -44,15 +43,34 @@ app.post('/envoyer-photo', async (req, res) => {
     res.status(500).send("❌ Erreur : " + error.message);
   }
 });
+const { getNomPrenomClient } = require('./oracle/clientDB');
+
+
+app.get('/clients/:id', async (req, res) => {
+  const clientId = req.params.id;
+
+  try {
+    const client = await getNomPrenomClient(clientId); // Fonction à créer
+    if (client) {
+      res.json(client);
+    } else {
+      res.status(404).send({ message: 'Client non trouvé' });
+    }
+  } catch (error) {
+    console.error('Erreur Oracle (recherche client) :', error);
+    res.status(500).send({ message: 'Erreur serveur', error: error.message });
+  }
+});
+
+
+
+
+
 
 
 const PORT = 3000;
 app.listen(PORT, () => {
   console.log(`Serveur lancé sur http://localhost:${PORT}`);
 });
-
-
-
-
 
 
