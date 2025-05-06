@@ -55,7 +55,8 @@
 
     .controls label {
       font-weight: bold;
-      margin-top: 5px;
+      margin-top: 0px;
+      align-items: anchor-center;
     }
 
     .controls input[type="number"],
@@ -64,7 +65,7 @@
     .controls input[readonly],
     .controls button {
       font-size: 14px;
-      padding: 6px;
+      padding: 5px;
       border: 1px solid #ccc;
       border-radius: 5px;
     }
@@ -99,10 +100,11 @@
     }
 
     @media (max-height: 800px) {
-      html, body {
-        overflow: hidden;
-      }
-    }
+  html, body {
+    overflow: auto;
+  }
+}
+
   </style>
 </head>
 <body>
@@ -113,20 +115,25 @@
     <canvas id="canvas"></canvas>
 
     <div class="controls">
+                  <label for="clientId">🆔 ID du dossier client :</label>
+
+      <div class="input-row">
+
+        <input type="number" id="clientId" required placeholder="Entrez l'ID du client">
+        <button id="btnRecherche" disabled>🔍 Rechercher</button>
+      </div>
+    <div>
       <label for="clientNom">👤 Nom :</label>
       <input type="text" id="clientNom" readonly>
 
       <label for="clientPrenom">👤 Prénom :</label>
       <input type="text" id="clientPrenom" readonly>
+    </div>
 
-      <label for="clientId">🆔 ID du dossier client :</label>
-      <div class="input-row">
-        <input type="number" id="clientId" required placeholder="Entrez l'ID du client">
-        <button id="btnRecherche" disabled>🔍 Rechercher</button>
-      </div>
+      
 
       <label for="importPhoto">📂 Importer une photo :</label>
-      <input type="file" id="importPhoto" accept="image/*">
+      <input type="file" id="importPhoto" accept="image/*" disabled>
 
       <div class="range-group">
         <label for="outputWidth">📏 Largeur :</label>
@@ -190,6 +197,7 @@
 
   clientIdInput.addEventListener('input', () => {
     btnRecherche.disabled = !clientIdInput.value;
+    
   });
 
   btnRecherche.addEventListener('click', async () => {
@@ -202,6 +210,7 @@
       clientNomInput.value = data.NM_CLI || '';
       clientPrenomInput.value = data.PN_CLI || '';
       captureButton.disabled = !(data.NM_CLI && data.PN_CLI);
+      importInput.disabled = !(data.NM_CLI && data.PN_CLI);
     } catch (error) {
       clientNomInput.value = '';
       clientPrenomInput.value = '';
