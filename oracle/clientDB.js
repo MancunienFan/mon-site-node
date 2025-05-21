@@ -63,15 +63,28 @@ async function getNomPrenomClient(clientId) {
 }*/
 async function getNomPrenomClient(id) {
   let connection;
-  try {
+  
     connection = await oracledb.getConnection({
       user: 'fcou01',
       password: 'fcou011',
       connectString: '10.102.109.105:1521/acc1'
     });
-
     const result = await connection.execute(
-      `SELECT NM_CLI, PN_CLI FROM COUT_CLI WHERE NO_DOSS = :id`,
+      `SELECT NM_CLI, PN_CLI, PHOTO, DT_PHOTO_PRISE FROM COUT_CLI WHERE NO_DOSS = :id`,
+      [id],
+      {
+        outFormat: oracledb.OUT_FORMAT_OBJECT,
+        fetchInfo: {
+          "PHOTO": { type: oracledb.BUFFER }
+        }
+      }
+    );
+    await connection.close();
+
+    return result.rows[0];
+   
+  /*  const result = await connection.execute(
+      `SELECT NM_CLI, PN_CLI, PHOTO FROM COUT_CLI WHERE NO_DOSS = :id`,
       [id],
       { outFormat: oracledb.OUT_FORMAT_OBJECT }
     );
@@ -84,9 +97,9 @@ async function getNomPrenomClient(id) {
     throw err;
   } finally {
     if (connection) await connection.close();
-  }
-}
+  }*/
 
+  }
 
 module.exports = {
   enregistrerPhotoDansCOUTCLI,

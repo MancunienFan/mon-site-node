@@ -98,3 +98,21 @@ canvas {
     overflow: auto;
   }
 }
+.camera-container {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.video-section {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+}
+
+.photo-info {
+  margin-top: auto; /* pousse en bas */
+  padding-top: 10px;
+}
+

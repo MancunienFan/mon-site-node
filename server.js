@@ -48,17 +48,19 @@ const { getNomPrenomClient } = require('./oracle/clientDB');
 
 app.get('/clients/:id', async (req, res) => {
   const clientId = req.params.id;
-
   try {
-    const client = await getNomPrenomClient(clientId); // Fonction à créer
-    if (client) {
-      res.json(client);
-    } else {
-      res.status(404).send({ message: 'Client non trouvé' });
-    }
-  } catch (error) {
-    console.error('Erreur Oracle (recherche client) :', error);
-    res.status(500).send({ message: 'Erreur serveur', error: error.message });
+    const data = await getNomPrenomClient(clientId);
+    if (!data) return res.status(404).send('Client non trouvé');
+
+    res.json({
+      nom: data.NM_CLI,
+      prenom: data.PN_CLI,
+      photo: data.PHOTO ? Buffer.from(data.PHOTO).toString('base64') : null,
+      date: data.DT_PHOTO_PRISE
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Erreur serveur');
   }
 });
 

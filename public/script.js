@@ -33,10 +33,18 @@
       const response = await fetch(`/clients/${clientId}`);
       if (!response.ok) throw new Error();
       const data = await response.json();
-      clientNomInput.value = data.NM_CLI || '';
-      clientPrenomInput.value = data.PN_CLI || '';
-      captureButton.disabled = !(data.NM_CLI && data.PN_CLI);
-      importInput.disabled = !(data.NM_CLI && data.PN_CLI);
+      clientNomInput.value = data.nom || '';
+      clientPrenomInput.value = data.prenom || '';
+      captureButton.disabled = !(data.nom && data.prenom);
+      importInput.disabled = !(data.nom && data.prenom);
+      document.getElementById('infoDate').textContent = formatDateSimple(data.date) || '';
+    document.getElementById('infoPhoto').src = data.photo ? `data:image/jpeg;base64,${data.photo}` : '';
+    if (data.date && data.photo) {
+      document.getElementById('photo-info').style.display = 'block';
+    } else {
+      document.getElementById('photo-info').style.display = 'none';
+    }
+    
     } catch (error) {
       clientNomInput.value = '';
       clientPrenomInput.value = '';
@@ -44,6 +52,15 @@
       alert("Client non trouvé. Veuillez vérifier l'ID saisi.");
     }
   });
+
+  function formatDateSimple(isoString) {
+    const date = new Date(isoString);
+    const jour = String(date.getDate()).padStart(2, '0');
+    const mois = String(date.getMonth() + 1).padStart(2, '0');
+    const annee = date.getFullYear();
+    return `${jour}/${mois}/${annee}`;
+  }
+  
 
   let currentBrightness = brightnessSlider.value;
   let currentContrast = contrastSlider.value;
@@ -171,3 +188,16 @@
     };
     reader.readAsDataURL(file);
   };
+
+  //pour l'affichage de la photo prise avec date de prise
+  async function chargerInfosClient(id) {
+    const response = await fetch(`/clients/${id}`);
+    if (!response.ok) return alert("Aucune donnée trouvée.");
+  
+    const data = await response.json();
+   
+    document.getElementById('infoDate').textContent = data.date || '';
+    document.getElementById('infoPhoto').src = data.photo ? `data:image/jpeg;base64,${data.photo}` : '';
+    document.getElementById('client-info').style.display = 'block';
+  }
+  
