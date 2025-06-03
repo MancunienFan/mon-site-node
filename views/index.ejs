@@ -1,0 +1,90 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Caméra - Capture Photo</title>
+  <link rel="stylesheet" href="style.css">
+  
+
+</head>
+
+<body data-username="<%= userName %>">
+    <div style="position: absolute; top: 10px; right: 10px; font-weight: bold;" >
+  👋 Bonjour, <%= userName %>
+</div>
+  
+  <h1>📷 Capture de Photo</h1>
+  <div class="camera-container">
+    <div class="video-section">
+      <video id="video" autoplay></video>
+      <canvas id="canvas"></canvas>
+      <img id="photo" style="display: none;" />
+      
+      <!-- Date + Photo alignés en bas -->
+      <div class="photo-info" id="photo-info" style="display: none;">
+      </br>
+      <h4>Aperçu de la photo existante</h4>
+        <img id="infoPhoto" src="" alt="Photo client" style="max-width: 300px; margin-top: 10px;">
+        <p><strong>Date Prise photo :</strong> <span id="infoDate"></span></p>
+      </div>
+    </div>
+  
+    <div class="controls">
+      <label for="clientId">🆔 ID du dossier client :</label>
+      <div class="input-row">
+        <input type="number" id="clientId" required placeholder="Entrez l'ID du client">
+        <button id="btnRecherche" disabled>🔍 Rechercher</button>
+      </div>
+  
+      <div>
+        <label for="clientNom">👤 Nom :</label>
+        <input type="text" id="clientNom" readonly>
+  
+        <label for="clientPrenom">👤 Prénom :</label>
+        <input type="text" id="clientPrenom" readonly>
+      </div>
+  
+      <label for="importPhoto">📂 Importer une photo :</label>
+      <input type="file" id="importPhoto" accept="image/*" disabled>
+  
+      <div class="range-group">
+        <label for="outputWidth">📏 Largeur :</label>
+        <input type="range" id="outputWidth" min="100" max="500" step="10" value="200">
+        <span id="widthValue">200</span>
+      </div>
+  
+      <div class="range-group">
+        <label for="outputHeight">📐 Hauteur :</label>
+        <input type="range" id="outputHeight" min="100" max="500" step="10" value="200">
+        <span id="heightValue">200</span>
+      </div>
+  
+      <div class="range-group">
+        <label>Luminosité :</label>
+        <input type="range" id="brightness" min="50" max="200" step="10" value="100">
+      </div>
+  
+      <div class="range-group">
+        <label>Contraste :</label>
+        <input type="range" id="contrast" min="-100" max="100" step="1" value="0">
+      </div>
+  
+      <div class="range-group">
+        <label>Exposition :</label>
+        <input type="range" id="exposure" min="-100" max="100" step="1" value="0">
+      </div>
+  
+      <div class="range-group">
+        <label>Zoom :</label>
+        <input type="range" id="zoom" min="1" max="3" step="0.1" value="1">
+      </div>
+  
+      <button id="capture" disabled>📸 Prendre la photo</button>
+      <button id="restart" style="display:none;">🔄 Reprendre la photo</button>
+      <button id="send">📤 Envoyer vers Oracle</button>  </div>
+  </div>
+  
+  <script src="script.js"></script>
+</body>
+</html>

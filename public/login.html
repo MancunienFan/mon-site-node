@@ -1,0 +1,14 @@
+const express = require('express');
+const sspi = require('node-expose-sspi');
+const app = express();
+
+app.use(sspi.auth());
+
+app.get('/', (req, res) => {
+  const username = req.sspi.userSid; // ou req.sspi.userName
+  res.send(`Bonjour ${req.sspi.userName}`);
+});
+
+app.listen(3000, () => {
+  console.log('Serveur en écoute sur le port 3000');
+});

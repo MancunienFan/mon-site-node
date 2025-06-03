@@ -25,6 +25,12 @@
     btnRecherche.disabled = !clientIdInput.value;
     
   });
+  clientIdInput.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') {
+    event.preventDefault(); // évite un éventuel comportement par défaut (formulaire)
+    btnRecherche.click(); // simule le clic sur le bouton
+  }
+});
 
   btnRecherche.addEventListener('click', async () => {
     const clientId = clientIdInput.value;
@@ -150,6 +156,9 @@
   sendButton.onclick = async () => {
     const id = clientIdInput.value;
     const dataUrl = photo.src;
+    const userName = document.body.dataset.username;
+    alert("Utilisateur :" + userName);
+
 
     if (!id || !dataUrl) {
       alert("ID ou image manquants.");
@@ -162,7 +171,7 @@
     const response = await fetch('/envoyer-photo', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, image: dataUrl, lang: 'FR' })
+      body: JSON.stringify({ id, image: dataUrl,userName , lang: 'FR' })
     });
 
     const result = await response.text();

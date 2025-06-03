@@ -3,7 +3,7 @@ const dbConfig = require('./dbConfig');
 
 
 
-async function enregistrerPhotoDansCOUTCLI(id, base64Image) {
+async function enregistrerPhotoDansCOUTCLI(id, base64Image, userName) {
   const connection = await oracledb.getConnection({
     user: 'fcou01',
     password: 'fcou011',
@@ -23,10 +23,11 @@ async function enregistrerPhotoDansCOUTCLI(id, base64Image) {
     await connection.execute(
       `UPDATE COUT_CLI
        SET PHOTO = :photo,
-       DT_PHOTO_PRISE = SYSDATE
+       DT_PHOTO_PRISE = SYSDATE,
+      CO_EMPLO = :co_employe
        WHERE NO_DOSS = :id`,
-      { photo: imageBuffer, id: parseInt(id) },
-      { autoCommit: true }
+      { photo: imageBuffer, id: parseInt(id), co_employe: userName },
+      { autoCommit: true }, 
     );
     console.log("✅ Photo insérée dans la table COUT_CLI");
   } catch (err) {
