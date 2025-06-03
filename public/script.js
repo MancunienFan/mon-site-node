@@ -157,7 +157,7 @@
     const id = clientIdInput.value;
     const dataUrl = photo.src;
     const userName = document.body.dataset.username;
-    alert("Utilisateur :" + userName);
+    
 
 
     if (!id || !dataUrl) {
