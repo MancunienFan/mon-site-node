@@ -1,46 +1,67 @@
-/*const express = require('express');
-const path = require('path');
-const app = express();
-const PORT = 3000;
 
-// Sert les fichiers statiques de "public"
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Exemple route API (clients)
-const { getDerniersClients } = require('./public/oracle/clientDB');
-
-app.get('/clients', async (req, res) => {
-  try {
-    const data = await getDerniersClients();
-    res.json(data);
-  } catch (err) {
-    res.status(500).send('Erreur serveur');
-  }
-});
-
-app.listen(PORT, () => {
-  console.log(`✅ Serveur démarré sur http://localhost:${PORT}`);
-});
-///////////// 
-*/
 const express = require('express');
 const oracledb = require('oracledb');
-
+const os = require('os');
 const bodyParser = require('body-parser');
 const path = require('path');
-
+const { getNomPrenomClient } = require('.//oracle//clientDB');
 const fs = require('fs');
 const cors = require('cors');
-
+const { closeConnection } = require('./oracle/dbSingleton');
 const app = express();
+
+const session = require('express-session');
+
+app.use(session({
+  secret: 'monSecretSuperSecurise',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: false, // ✅ important si tu n’utilises pas HTTPS
+    httpOnly: true,
+    maxAge: 1000 * 60 * 60 // 1h par exemple
+  }
+}));
+
+
+
 app.use(cors());
 app.use(bodyParser.json({ limit: '20mb' }));
 app.use(express.static('public'));
+app.use(express.urlencoded({ extended: true }));
+const { enregistrerPhotoDansCOUTCLI } = require('./oracle/clientDB');
 
-const { enregistrerPhotoDansCOUTCLI } = require('.//oracle//clientDB');
+// Activer EJS
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+
+// Fichiers statiques (style.css, script.js)
+app.use(express.static(path.join(__dirname, 'public')));
+
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+
+app.get('/index', (req, res) => {
+  if (!req.session.user) {
+    return res.redirect('/login.html');
+  }
+   res.render('index', { userName: req.session.user })
+});
+
 
 app.post('/envoyer-photo', async (req, res) => {
-  const { id, image,userName } = req.body;
+  const { id, image, userName } = req.body;
+ console.log("Session complète : ", req.session);
+
+ // 
+ /* if (!req.session.user || !req.session.user.username) {
+    return res.status(401).json({ error: 'Utilisateur non connecté' });
+  }*/
+  
+ console.log("cod emplo  connecté :", userName);
 
   try {
     await enregistrerPhotoDansCOUTCLI(id, image, userName);
@@ -49,7 +70,7 @@ app.post('/envoyer-photo', async (req, res) => {
     res.status(500).send("❌ Erreur : " + error.message);
   }
 });
-const { getNomPrenomClient } = require('./oracle/clientDB');
+
 
 
 app.get('/clients/:id', async (req, res) => {
@@ -72,41 +93,12 @@ app.get('/clients/:id', async (req, res) => {
 
 
 
-
-
-
-
-
-
-
-
-const os = require('os');
-
-
-// Activer EJS
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
-
-// Fichiers statiques (style.css, script.js)
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Route principale
-/*app.get('/', (req, res) => {
-  const userName = os.userInfo().username;
-  res.render('index', { userName });
-});
-*/
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login.html'));
-});
-app.get('/index', (req, res) => {
-  const userName = 'Utilisateur'; // Par exemple : tu peux utiliser le vrai nom après login
-  res.render('index', { userName });
+app.get('/test-session', (req, res) => {
+  console.log("Session reçue dans /test-session :", session);
+  res.json(req.session);
 });
 
 
-
-const { closeConnection } = require('./oracle/dbSingleton');
 
 process.on('SIGINT', async () => {
   console.log('🛑 Fermeture du serveur...');
@@ -119,6 +111,8 @@ process.on('SIGINT', async () => {
 app.post('/connect', async (req, res) => {
   const { user, password, host, port, sid } = req.body;
 
+  console.log("Données de connexion reçues :", { user, password, host, port, sid });
+
   const config = {
     user,
     password,
@@ -127,6 +121,10 @@ app.post('/connect', async (req, res) => {
 
   try {
     const connection = await oracledb.getConnection(config);
+        
+        req.session.user = user; // Stocker le nom d'utilisateur dans la session
+
+console.log("Session après login :", req.session);
     await connection.close();
 
     // Écrire dans dbConfig.js

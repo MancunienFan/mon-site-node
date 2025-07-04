@@ -1,4 +1,6 @@
 const { getConnection } = require('./dbSingleton');
+const oracledb = require('oracledb');
+const dbConfig = require('./dbConfig'); // sera défini après connexion
 
 async function enregistrerPhotoDansCOUTCLI(id, base64Image, userName) {
   const connection = await getConnection();
@@ -46,8 +48,19 @@ async function getNomPrenomClient(id) {
     throw err;
   }
 }
+/*
+async function getConnection() {
+  try {
+    return await oracledb.getConnection(dbConfig);
+  } catch (err) {
+    console.error('Erreur connexion Oracle:', err);
+    throw err;
+  }
+}
+*/
 
 module.exports = {
   enregistrerPhotoDansCOUTCLI,
-  getNomPrenomClient
+  getNomPrenomClient,
+  getConnection
 };
