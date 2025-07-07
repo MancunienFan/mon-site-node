@@ -1,37 +1,50 @@
 const oracledb = require('oracledb');
-const dbConfig = require('./dbConfig');
+const { getDbConfig } = require('./dbConfig');
+
+
+async function getConnection(session) {
+  const dbConfig = getDbConfig(session); // <- session contient { user, password }
+  return await oracledb.getConnection(dbConfig);
+}
 
 
 
-async function enregistrerPhotoDansCOUTCLI(id, base64Image, userName) {
-  const connection = await oracledb.getConnection({
-    user: 'fcou01',
-    password: 'fcou011',
-    connectString: '10.102.109.105:1521/acc1',
-  });
+async function enregistrerPhotoDansCOUTCLI(id, base64Image, session) {
+  
+   let connection;
+  if (!session.user || !session.user.username || !session.user.password) {
+  throw new Error("Session invalide : informations utilisateur manquantes");
+}
 
-  // Retirer le préfixe base64
+connection = await oracledb.getConnection({
+  user: session.user.username,
+  password: session.user.password,
+  connectString: '10.102.109.105:1521/acc1'
+});
+
+  if (!connection) throw new Error("Connexion Oracle échouée");
+
   const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
   const imageBuffer = Buffer.from(base64Data, 'base64');
 
   try {
-   /* await connection.execute(
-      `INSERT INTO COUT_CLI (NO_DOSS, CO_TYP_CLI, , PHOTO) VALUES (:id, :type,:photo)`,
-      { id: parseInt(id), type: 'I' ,photo: imageBuffer },
-      { autoCommit: true }
-    );*/
-    await connection.execute(
-      `UPDATE COUT_CLI
-       SET PHOTO = :photo,
+await connection.execute(
+  `UPDATE COUT_CLI
+   SET PHOTO = :photo,
        DT_PHOTO_PRISE = SYSDATE,
-      CO_EMPLO = :co_employe
-       WHERE NO_DOSS = :id`,
-      { photo: imageBuffer, id: parseInt(id), co_employe: userName },
-      { autoCommit: true }, 
-    );
-    console.log("✅ Photo insérée dans la table COUT_CLI");
+       CO_EMPLO = :co_employe
+   WHERE NO_DOSS = :id`,
+  {
+    photo: { val: imageBuffer, type: oracledb.BLOB },
+    id: parseInt(id),
+    co_employe: session.user.username
+  },
+  { autoCommit: true }
+);
+
+    console.log("✅ Photo insérée");
   } catch (err) {
-    console.error("❌ Erreur lors de l'insertion dans COUT_CLI :", err);
+    console.error("❌ Erreur SQL :", err);
     throw err;
   } finally {
     await connection.close();
@@ -39,70 +52,36 @@ async function enregistrerPhotoDansCOUTCLI(id, base64Image, userName) {
 }
 
 
-
-/*
-async function getNomPrenomClient(clientId) {
+async function getNomPrenomClient(id, session) {
   let connection;
 
-  try {
-    connection = await oracledb.getConnection(dbConfig);
+  if (!session.user || !session.user.username || !session.user.password) {
+  throw new Error("Session invalide : informations utilisateur manquantes");
+}
 
-    const result = await connection.execute(
-      `SELECT NM_CLI, PN_CLI FROM CLIENTS WHERE NO_DOSS = :id`,
-      [clientId],
-      { outFormat: oracledb.OUT_FORMAT_OBJECT }
-    );
+connection = await oracledb.getConnection({
+  user: session.user.username,
+  password: session.user.password,
+  connectString: '10.102.109.105:1521/acc1'
+});
 
-    return result.rows[0]; // { NOM: 'Dupont', PRENOM: 'Jean' } par exemple
-  } catch (error) {
-    throw error;
-  } finally {
-    if (connection) {
-      await connection.close();
-    }
-  }
-}*/
-async function getNomPrenomClient(id) {
-  let connection;
-  
-    connection = await oracledb.getConnection({
-      user: 'fcou01',
-      password: 'fcou011',
-      connectString: '10.102.109.105:1521/acc1'
-    });
-    const result = await connection.execute(
-      `SELECT NM_CLI, PN_CLI, PHOTO, DT_PHOTO_PRISE FROM COUT_CLI WHERE NO_DOSS = :id`,
-      [id],
-      {
-        outFormat: oracledb.OUT_FORMAT_OBJECT,
-        fetchInfo: {
-          "PHOTO": { type: oracledb.BUFFER }
-        }
+  const result = await connection.execute(
+    `SELECT NM_CLI, PN_CLI, PHOTO, DT_PHOTO_PRISE FROM COUT_CLI WHERE NO_DOSS = :id`,
+    [id],
+    {
+      outFormat: oracledb.OUT_FORMAT_OBJECT,
+      fetchInfo: {
+        "PHOTO": { type: oracledb.BUFFER }
       }
-    );
-    await connection.close();
+    }
+  );
+  await connection.close();
+  return result.rows[0];
 
-    return result.rows[0];
-   
-  /*  const result = await connection.execute(
-      `SELECT NM_CLI, PN_CLI, PHOTO FROM COUT_CLI WHERE NO_DOSS = :id`,
-      [id],
-      { outFormat: oracledb.OUT_FORMAT_OBJECT }
-    );
-
-    if (result.rows.length === 0) return null;
-    return result.rows[0];
-
-  } catch (err) {
-    console.error('Erreur Oracle (getNomPrenomClient):', err);
-    throw err;
-  } finally {
-    if (connection) await connection.close();
-  }*/
-
-  }
+}
 
 module.exports = {
+  getConnection,
   enregistrerPhotoDansCOUTCLI,
   getNomPrenomClient
 };
