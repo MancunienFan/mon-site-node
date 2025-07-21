@@ -10,11 +10,18 @@
 </head>
 
 <body data-username="<%= userName %>">
-    <div style="position: absolute; top: 10px; right: 10px; font-weight: bold;" >
+  <header class="header-banner">
+  <div class="header-content">
+    <img src="/images/logo-quebec.png" alt="Logo Québec" class="logo-quebec">
+   
+  </div>
+</header>
+
+    <div style="position: absolute; top: 10px; right: 10px; font-weight: bold; color: white;" >
   👋 Bonjour, <%= userName %>
 </div>
   
-  <h1>📷 Capture de Photo</h1>
+  <h2>📷 Capture de Photo</h2>
   <div class="camera-container">
     <div class="video-section">
       <video id="video" autoplay></video>
@@ -40,7 +47,8 @@
       <div>
         <label for="clientNom">👤 Nom :</label>
         <input type="text" id="clientNom" readonly>
-  
+      </div>
+      <div>
         <label for="clientPrenom">👤 Prénom :</label>
         <input type="text" id="clientPrenom" readonly>
       </div>

@@ -116,3 +116,51 @@ canvas {
   padding-top: 10px;
 }
 
+
+
+/*logo*/
+/* Enlève toute marge par défaut */
+body, html {
+  margin: 0;
+  padding: 0;
+}
+
+/* Bande bleue plein écran */
+.header-banner {
+  width: 100%;
+  background-color: #00559b; /* Bleu Québec */
+  color: white;
+}
+
+/* Contenu de la bannière */
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  box-sizing: border-box;
+}
+
+/* Partie gauche */
+.left {
+  display: flex;
+  align-items: center;
+}
+
+/* Logo */
+.logo-quebec {
+  height: 40px;
+  margin-right: 15px;
+}
+
+/* Titre */
+.org-title {
+  font-size: 1rem;
+  white-space: nowrap;
+}
+
+/* Partie droite (Bonjour) */
+.right {
+  font-size: 0.9rem;
+  color: white;
+}

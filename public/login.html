@@ -1,0 +1,37 @@
+<!-- public/login.html -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Connexion Oracle</title>
+</head>
+<body>
+  <h2>Connexion à Oracle</h2>
+  <form id="loginForm">
+    <input type="text" id="username" placeholder="Nom d'utilisateur Oracle" required>
+    <input type="password" id="password" placeholder="Mot de passe Oracle" required>
+    <button type="submit">Connexion</button>
+  </form>
+
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+
+      const res = await fetch('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ username, password })
+      });
+
+      if (res.ok) {
+        window.location.href = '/'; // ou une autre page après login
+      } else {
+        alert("Échec de la connexion à Oracle.");
+      }
+    });
+  </script>
+</body>
+</html>
