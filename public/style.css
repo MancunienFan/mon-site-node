@@ -166,4 +166,11 @@ body, html {
 }
 
 
-/* slider */
+/* dimension de la photo capturée */
+#video, #photo {
+  width: 300px;
+  height: 300px;
+  object-fit: cover;
+  border: 1px solid #ccc;
+}
+
