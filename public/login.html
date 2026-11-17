@@ -1,35 +1,66 @@
-<!-- public/login.html -->
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
-  <title>Connexion Oracle</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Connexion — Prise de photos</title>
+  <link rel="stylesheet" href="/style.css">
 </head>
-<body>
-  <h2>Connexion à Oracle</h2>
-  <form id="loginForm">
-    <input type="text" id="username" placeholder="Nom d'utilisateur Oracle" required>
-    <input type="password" id="password" placeholder="Mot de passe Oracle" required>
-    <button type="submit">Connexion</button>
-  </form>
-
+<body class="login-page">
+  <header class="site-header">
+    <div class="site-brand">
+      <img class="quebec-flag" src="/images/drapeau-quebec.svg" alt="Drapeau du Québec" width="66" height="44">
+      <span class="agency-name">Régie des alcools,<br>des courses et des jeux</span>
+    </div>
+    <span class="header-page-name">Prise de photos</span>
+  </header>
+  <main class="login-main">
+    <section class="login-card" aria-labelledby="loginTitle">
+      <h1 id="loginTitle">Connexion</h1>
+      <p class="login-intro">Accédez à l’application de prise de photos.</p>
+      <form id="loginForm" class="login-form">
+        <label for="username">Nom d’utilisateur</label>
+        <input type="text" id="username" name="user" autocomplete="username" required autofocus>
+        <label for="password">Mot de passe</label>
+        <input type="password" id="password" name="password" autocomplete="current-password" required>
+        <button type="submit" id="loginButton">Se connecter</button>
+        <p id="loginError" class="login-error" role="alert" hidden></p>
+      </form>
+    </section>
+  </main>
   <script>
-    document.getElementById('loginForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      const username = document.getElementById('username').value;
-      const password = document.getElementById('password').value;
-
-      const res = await fetch('/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ username, password })
-      });
-
-      if (res.ok) {
-        window.location.href = '/'; // ou une autre page après login
-      } else {
-        alert("Échec de la connexion à Oracle.");
+    const form = document.getElementById('loginForm');
+    const button = document.getElementById('loginButton');
+    const errorMessage = document.getElementById('loginError');
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      errorMessage.hidden = true;
+      errorMessage.textContent = '';
+      button.disabled = true;
+      button.textContent = 'Connexion…';
+      try {
+        const response = await fetch('/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            user: document.getElementById('username').value.trim(),
+            password: document.getElementById('password').value
+          })
+        });
+        const result = await response.json();
+        if (response.ok && result.success) {
+          window.location.assign('/index');
+        } else {
+          errorMessage.textContent = result.message || 'Connexion refusée. Vérifiez vos identifiants.';
+          errorMessage.hidden = false;
+        }
+      } catch (error) {
+        errorMessage.textContent = 'Impossible de joindre le serveur. Vérifiez qu’il est démarré, puis réessayez.';
+        errorMessage.hidden = false;
+      } finally {
+        button.disabled = false;
+        button.textContent = 'Se connecter';
       }
     });
   </script>

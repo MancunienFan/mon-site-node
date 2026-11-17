@@ -1,0 +1,52 @@
+RESTAURATION DE L'APPLICATION PHOTO
+
+INSTALLATION SIMPLE — CORRECTIF LEGER
+1. Arreter le serveur Node deja ouvert avec Ctrl+C dans sa fenetre.
+2. Extraire le contenu de Correctif_application_photo.zip directement dans
+   le dossier actuel du projet, au meme niveau que server.js et dbConfig.js.
+   Accepter le remplacement des fichiers proposes et conserver les dossiers.
+3. Double-cliquer sur photo.bat, place juste a cote de server.js.
+4. Garder la fenetre de commande ouverte : elle fait tourner le site.
+5. Edge ouvre http://localhost:3000/login lorsque le serveur est pret.
+6. Saisir seulement le nom d'utilisateur Oracle et son mot de passe.
+7. Apres validation, la page /index affiche le bandeau bleu, le drapeau du
+   Quebec et le nom de l'utilisateur de la session en haut a droite.
+
+PROJET COMPLET
+mon-site-node_retabli.zip contient le dossier complet mon-site-node.
+Il comprend les dependances et la configuration de l'archive fournie.
+Extraire ce dossier a l'emplacement souhaite puis lancer son photo.bat.
+Eviter de lancer simultanement deux copies du serveur sur le meme port.
+
+CONFIGURATION DE PRODUCTION
+Le fichier dbConfig.js et les modules du dossier oracle sont conserves
+strictement a l'identique de l'archive fournie, de meme que le script photo
+et les fichiers package.json/package-lock.json.
+La page de connexion ne demande ni hote, ni port, ni SID.
+La validation du formulaire utilise le connectString deja configure.
+Une connexion ne reecrit plus dbConfig.js.
+Le nom du bandeau et le code employe de la photo viennent de la session.
+
+FICHIERS DU CORRECTIF
+- server.js : routes login/index, session, connexion et ouverture d'Edge.
+- index.js : entree alternative vers le meme serveur.
+- photo.bat : lancement depuis son propre dossier, ouverture d'Edge apres
+  demarrage effectif du serveur, maintien de la fenetre de commande.
+- public/login.html : formulaire utilisateur et mot de passe.
+- public/style.css : bandeau bleu et styles de la connexion.
+- public/images/drapeau-quebec.svg : drapeau du bandeau, disponible localement.
+- views/index.ejs : page photo avec utilisateur connecte dans le bandeau.
+- LIRE_AVANT_INSTALLATION.txt : ces instructions.
+
+LANCEMENT MANUEL
+Depuis le dossier du projet : node server.js
+Puis ouvrir http://localhost:3000/login.
+La commande npm start lance egalement server.js.
+
+VERIFICATIONS EFFECTUEES
+- Demarrage reel de node server.js et reponse de la page /login.
+- Tests HTTP avec Express, EJS et express-session du projet.
+- Login, cookie de session, nom du bandeau, controle d'acces et deconnexion.
+- Lecture et envoi d'une photo avec Oracle simule, sans acces a la base reelle.
+- Verification de la conservation binaire des fichiers de connectivite.
+Le lancement d'Edge par le fichier bat reste a verifier sous Windows.
