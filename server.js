@@ -6,6 +6,8 @@ const path = require('path');
 const dbConfig = require('./dbConfig');
 const { getNomPrenomClient, enregistrerPhotoDansCOUTCLI } = require('./oracle/clientDB');
 const { closeConnection } = require('./oracle/dbSingleton');
+const { getLieux, getSommaire } = require('./oracle/sommaireDepotDB');
+const { genererSommaire } = require('./services/sommairePdf');
 
 const app = express();
 app.use(session({
@@ -39,6 +41,11 @@ app.get('/index', (req, res) => {
   res.render('index', { userName: req.session.user });
 });
 app.get('/index.html', (req, res) => res.redirect('/index'));
+app.get('/sommaire-depot', (req, res) => {
+  if (!req.session.user) return res.redirect('/login');
+  res.set('Cache-Control', 'no-store');
+  res.render('sommaire-depot', { userName: req.session.user });
+});
 
 // Seuls les identifiants viennent du formulaire : la destination reste dans dbConfig.js.
 app.post('/connect', async (req, res) => {
@@ -91,6 +98,48 @@ app.get('/clients/:id', requireSession, async (req, res) => {
   } catch (error) {
     console.error('Lecture du client :', error.message);
     return res.status(500).send('Erreur serveur');
+  }
+});
+
+app.get('/api/sommaire-depot/lieux', requireSession, async (req, res) => {
+  try {
+    return res.json(await getLieux());
+  } catch (error) {
+    console.error('Lecture des lieux impossible');
+    return res.status(500).json({ error: 'Impossible de lire les lieux.' });
+  }
+});
+
+app.get('/api/sommaire-depot', requireSession, async (req, res) => {
+  const { date_recu, endroit } = req.query;
+  const match = typeof date_recu === 'string' && /^(\d{4})-(\d{2})-(\d{2})$/.exec(date_recu);
+  const date = match && new Date(date_recu + 'T00:00:00Z');
+  if (!match || !date || Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== date_recu || date_recu.startsWith('0000') || typeof endroit !== 'string' || !endroit.trim()) {
+    return res.status(400).json({ error: 'Date ou lieu invalide.' });
+  }
+  try {
+    return res.json(await getSommaire(date_recu, endroit));
+  } catch (error) {
+    console.error('Lecture du sommaire impossible');
+    return res.status(500).json({ error: 'Impossible de lire le sommaire.' });
+  }
+});
+
+app.get('/api/sommaire-depot/pdf', requireSession, async (req, res) => {
+  const { date_recu, endroit, bordereau } = req.query;
+  const date = typeof date_recu === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date_recu) && new Date(date_recu + 'T00:00:00Z');
+  if (!date || Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== date_recu || date_recu.startsWith('0000') || typeof endroit !== 'string' || !endroit.trim() || typeof bordereau !== 'string') return res.status(400).json({ error: 'Critères invalides.' });
+  try {
+    const [lieux, lignes] = await Promise.all([getLieux(), getSommaire(date_recu, endroit)]);
+    const lieu = lieux.find(l => String(l.CODE_LIEU) === endroit);
+    if (!lieu) return res.status(400).json({ error: 'Lieu invalide.' });
+    if (!lignes.length) return res.status(404).json({ error: 'Aucune donnée pour ces critères.' });
+    res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': 'attachment; filename="sommaire-depot.pdf"', 'Cache-Control': 'no-store' });
+    genererSommaire(res, lignes, { date_recu, bordereau, lieu: lieu.DESCRIPTION_LIEU || lieu.NOM_LIEU });
+  } catch (error) {
+    console.error('Génération du sommaire impossible');
+    if (!res.headersSent) return res.status(500).json({ error: 'Impossible de générer le PDF.' });
+    res.destroy();
   }
 });
 

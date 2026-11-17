@@ -17,7 +17,8 @@
     "express": "^5.1.0",
     "express-session": "^1.18.1",
     "node-expose-sspi": "^0.1.60",
-    "oracledb": "^6.8.0"
+    "oracledb": "^6.8.0",
+    "pdfkit": "^0.20.2"
   },
   "devDependencies": {
     "nodemon": "^3.1.9"
