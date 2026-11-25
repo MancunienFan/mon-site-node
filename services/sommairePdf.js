@@ -30,18 +30,28 @@ function genererSommaire(res, lignes, infos) {
     if (y + h > 750) page();
     values.forEach((v, i) => doc.text(v, xs[i], y, { width: widths[i], align: i === 5 ? 'right' : 'left' })); y += h;
   }
-  const entries = Math.max(modes.size, types.size);
-  const boxHeight = 85 + entries * 15;
-  if (y + boxHeight + 120 > 750) page();
+  const modeRows = [...modes.values()];
+  const typeRows = [...types.values()];
+  const entries = Math.max(modeRows.length, typeRows.length);
+  const chunkSize = 24;
+  let offset = 0;
+  do {
+  const count = Math.min(chunkSize, entries - offset);
+  const last = offset + count >= entries;
+  const boxHeight = 85 + count * 15;
+  if (y + boxHeight + (last ? 120 : 0) > 750) page();
   doc.rect(20, y, 572, boxHeight).stroke();
   doc.font('Helvetica-Bold').fontSize(8).text(`Numéro bordereau : ${infos.bordereau}`, 25, y + 6, { width: 185 }).text(`Date dépôt : ${infos.date_recu}`, 212, y + 6, { width: 150 }).text(`Lieu dépôt : ${infos.lieu}`, 365, y + 6, { width: 220 });
   doc.moveTo(20, y + 22).lineTo(592, y + 22).stroke();
   doc.text('Mode paiement', 30, y + 30).text('Total', 190, y + 30).text('Type paiement', 255, y + 30).text('Poste comptable', 390, y + 30).text('Total', 535, y + 30);
   doc.font('Helvetica');
-  [...modes.values()].forEach((v, i) => { doc.text(v.label, 30, y + 45 + i * 15, {width:155}); doc.text(money(v.cents), 180, y + 45 + i * 15, {width:65,align:'right'}); });
-  [...types.values()].forEach((v, i) => { doc.text(v.label[0], 255, y + 45 + i * 15, {width:130}); doc.text(String(v.label[1]), 390, y + 45 + i * 15, {width:120}); doc.text(money(v.cents), 520, y + 45 + i * 15, {width:65,align:'right'}); });
-  doc.font('Helvetica-Bold').text(`Montant des droits et des frais : ${money(total)}`, 25, y + boxHeight - 20).text(`Montant encaissé : ${money(total)}`, 320, y + boxHeight - 20);
+  modeRows.slice(offset, offset + count).forEach((v, i) => { doc.text(v.label, 30, y + 45 + i * 15, {width:155, height:14, ellipsis:true}); doc.text(money(v.cents), 180, y + 45 + i * 15, {width:65,align:'right'}); });
+  typeRows.slice(offset, offset + count).forEach((v, i) => { doc.text(v.label[0], 255, y + 45 + i * 15, {width:130, height:14, ellipsis:true}); doc.text(String(v.label[1]), 390, y + 45 + i * 15, {width:120, height:14, ellipsis:true}); doc.text(money(v.cents), 520, y + 45 + i * 15, {width:65,align:'right'}); });
+  if (last) doc.font('Helvetica-Bold').text(`Montant des droits et des frais : ${money(total)}`, 25, y + boxHeight - 20).text(`Montant encaissé : ${money(total)}`, 320, y + boxHeight - 20);
   y += boxHeight + 25;
+  offset += count;
+  if (!last) page();
+  } while (offset < entries);
   doc.text('Date  ____________________', 45, y).text('Signature  ______________________________', 260, y);
   doc.rect(20, y + 25, 572, 65).stroke().text('Remarques (no. dossier, montant encaissé en surplus, poste comptable concerné) :', 25, y + 30);
   const range = doc.bufferedPageRange();

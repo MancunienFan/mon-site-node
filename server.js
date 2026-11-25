@@ -130,7 +130,8 @@ app.get('/api/sommaire-depot/pdf', requireSession, async (req, res) => {
   const date = typeof date_recu === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date_recu) && new Date(date_recu + 'T00:00:00Z');
   if (!date || Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== date_recu || date_recu.startsWith('0000') || typeof endroit !== 'string' || !endroit.trim() || typeof bordereau !== 'string') return res.status(400).json({ error: 'Critères invalides.' });
   try {
-    const [lieux, lignes] = await Promise.all([getLieux(), getSommaire(date_recu, endroit)]);
+    const lieux = await getLieux();
+    const lignes = await getSommaire(date_recu, endroit);
     const lieu = lieux.find(l => String(l.CODE_LIEU) === endroit);
     if (!lieu) return res.status(400).json({ error: 'Lieu invalide.' });
     if (!lignes.length) return res.status(404).json({ error: 'Aucune donnée pour ces critères.' });
