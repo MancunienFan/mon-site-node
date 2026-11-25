@@ -35,7 +35,7 @@ FICHIERS DU CORRECTIF
 - public/login.html : formulaire utilisateur et mot de passe.
 - public/style.css : bandeau bleu et styles de la connexion.
 - public/images/drapeau-quebec.svg : drapeau du bandeau, disponible localement.
-- views/index.ejs : page photo avec utilisateur connecte dans le bandeau.
+- views/capture-photo.ejs : page photo avec utilisateur connecte dans le bandeau.
 - LIRE_AVANT_INSTALLATION.txt : ces instructions.
 
 LANCEMENT MANUEL

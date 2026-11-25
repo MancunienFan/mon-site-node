@@ -22,6 +22,30 @@ test('routes protégées et lectures du sommaire', async () => {
     const login = await fetch(base + '/connect', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ user: 'test', password: 'test' }) });
     assert.equal(login.status, 200);
     const headers = { cookie: login.headers.get('set-cookie').split(';')[0] };
+    const root = await fetch(base + '/', { headers, redirect: 'manual' });
+    assert.equal(root.headers.get('location'), '/sommaire-depot');
+    for (const legacy of ['/index', '/index.html']) {
+      for (const requestHeaders of [{}, headers]) {
+        const redirect = await fetch(base + legacy, { headers: requestHeaders, redirect: 'manual' });
+        assert.equal(redirect.headers.get('location'), '/capture-photo');
+        const destination = await fetch(base + legacy, { headers: requestHeaders });
+        assert.equal(new URL(destination.url).pathname, requestHeaders.cookie ? '/capture-photo' : '/login');
+      }
+    }
+    for (const [url, active] of [['/sommaire-depot', 'Sommaire de dépôt'], ['/capture-photo', 'Capture photo']]) {
+      for (let i = 0; i < 2; i++) {
+        const page = await fetch(base + url, { headers });
+        const html = await page.text();
+        assert.equal(page.status, 200);
+        assert.ok(html.indexOf('href="/sommaire-depot"') < html.indexOf('href="/capture-photo"'));
+        assert.match(html, new RegExp('aria-current="page">' + active));
+      }
+    }
+    const oldScript = await fetch(base + '/script.js');
+    const newScript = await fetch(base + '/capture-photo.js');
+    assert.equal(oldScript.status, 200);
+    assert.match(oldScript.headers.get('content-type'), /javascript/);
+    assert.equal(await oldScript.text(), await newScript.text());
     assert.equal((await fetch(base + '/sommaire-depot', { headers })).status, 200);
     assert.equal((await fetch(base + '/api/sommaire-depot/lieux', { headers })).status, 200);
     assert.equal((await fetch(base + '/api/sommaire-depot?date_recu=2026-02-30&endroit=01', { headers })).status, 400);

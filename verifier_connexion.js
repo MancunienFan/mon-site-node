@@ -1,5 +1,5 @@
 // À placer à côté de server.js, puis lancer : node verifier_connexion.js
-// Lecture seule : aucune modification de données ni de configuration.
+// Lecture seule. Définir ORACLE_USER et ORACLE_PASSWORD pour ce processus.
 'use strict';
 
 const path = require('path');
@@ -15,19 +15,17 @@ async function main() {
   }
 
   let connection;
-  let singleton;
   let config;
   try {
     const configPath = require.resolve(path.join(projectDir, 'dbConfig.js'));
-    const clientPath = require.resolve(path.join(projectDir, 'oracle', 'clientDB.js'));
-    const singletonPath = require.resolve(path.join(projectDir, 'oracle', 'dbSingleton.js'));
     config = require(configPath);
+    const user = (process.env.ORACLE_USER || '').trim().toUpperCase();
+    const password = process.env.ORACLE_PASSWORD;
+    if (!user || !password) throw new Error('Définissez ORACLE_USER et ORACLE_PASSWORD avant le diagnostic.');
 
     console.log('\n--- DOSSIER ET FICHIERS CONTRÔLÉS ---');
     console.log('Serveur du projet :', serverPath);
     console.log('Configuration :', configPath);
-    console.log('Module clients/photos :', clientPath);
-    console.log('Singleton :', singletonPath);
 
     const target = String(config.connectString || '');
     const descriptorService = target.match(/\(SERVICE_NAME\s*=\s*([^)]+)\)/i);
@@ -44,13 +42,7 @@ async function main() {
       console.log('Format de connexion non affiché. La réponse Oracle ci-dessous fait foi.');
     }
 
-    const clientDB = require(clientPath);
-    singleton = require(singletonPath);
-    if (typeof clientDB.getConnection !== 'function') {
-      throw new Error('Le module oracle/clientDB.js ne fournit pas getConnection.');
-    }
-
-    connection = await clientDB.getConnection();
+    connection = await require('oracledb').getConnection({ user, password, connectString: config.connectString });
     const result = await connection.execute(
       `SELECT
          SYS_CONTEXT('USERENV', 'DB_NAME') AS BASE,
@@ -73,19 +65,11 @@ async function main() {
     console.log('\nCe contrôle utilise un nouveau processus Node dans le dossier indiqué.');
     console.log('Il faut aussi vérifier que le navigateur utilise le serveur lancé depuis ce dossier.');
   } catch (error) {
-    let message = String(error && error.message ? error.message : error);
-    if (config && typeof config.password === 'string' && config.password.length) {
-      message = message.split(config.password).join('[mot de passe masqué]');
-    }
-    console.error('\nDIAGNOSTIC IMPOSSIBLE :', message);
+    console.error('\nDIAGNOSTIC IMPOSSIBLE : vérifiez les identifiants et l’accès Oracle.');
     process.exitCode = 1;
   } finally {
     try {
-      if (singleton && typeof singleton.closeConnection === 'function') {
-        await singleton.closeConnection();
-      } else if (connection) {
-        await connection.close();
-      }
+      if (connection) await connection.close();
     } catch (_) {
       console.error('La connexion de diagnostic n’a pas pu être fermée proprement.');
       process.exitCode = 1;

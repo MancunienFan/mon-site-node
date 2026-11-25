@@ -1,13 +1,10 @@
-const { getConnection } = require('./dbSingleton');
 const oracledb = require('oracledb');
 const dbConfig = require('../dbConfig'); // sera défini après connexion
 
-async function enregistrerPhotoDansCOUTCLI(id, base64Image, userName) {
-  const connection = await getConnection();
+async function enregistrerPhotoDansCOUTCLI(connection, id, base64Image, userName) {
 
   const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
   const imageBuffer = Buffer.from(base64Data, 'base64');
- console.log("cod emplo  dbClient :", userName);
 
   try {
     await connection.execute(
@@ -21,13 +18,11 @@ async function enregistrerPhotoDansCOUTCLI(id, base64Image, userName) {
     );
     console.log("✅ Photo insérée dans la table COUT_CLI");
   } catch (err) {
-    console.error("❌ Erreur lors de l'insertion dans COUT_CLI :", err);
     throw err;
   }
 }
 
-async function getNomPrenomClient(id) {
-  const connection = await getConnection();
+async function getNomPrenomClient(connection, id) {
 
   try {
     const result = await connection.execute(
@@ -45,7 +40,6 @@ async function getNomPrenomClient(id) {
 
     return result.rows[0] || null;
   } catch (err) {
-    console.error("❌ Erreur Oracle (getNomPrenomClient):", err);
     throw err;
   }
 }
@@ -62,6 +56,5 @@ async function getConnection() {
 
 module.exports = {
   enregistrerPhotoDansCOUTCLI,
-  getNomPrenomClient,
-  getConnection
+  getNomPrenomClient
 };

@@ -1,27 +1,46 @@
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Caméra - Capture Photo</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="/style.css?v=20261105-rotation">
   
 
 </head>
 
-<body>
-  
+<body class="photo-page" data-username="<%= userName %>">
+  <header class="site-header">
+    <div class="site-brand">
+      <img class="quebec-flag" src="/images/drapeau-quebec.svg" alt="Drapeau du Québec" width="66" height="44">
+      <span class="agency-name">Régie des alcools,<br>des courses et des jeux</span>
+    </div>
+    <div class="header-session">
+      <div class="session-name"><span>Utilisateur connecté</span><strong><%= userName %></strong></div>
+      <form action="/logout" method="post"><button class="logout-button" type="submit">Déconnexion</button></form>
+    </div>
+  </header>
+  <main class="app-content">
+  <nav class="app-nav"><a href="/sommaire-depot">Sommaire de dépôt</a><a href="/capture-photo" aria-current="page">Capture photo</a></nav>
   <h1>📷 Capture de Photo</h1>
   <div class="camera-container">
     <div class="video-section">
       <video id="video" autoplay></video>
       <canvas id="canvas"></canvas>
-      <img id="photo" style="display: none;" />
+      <img id="photo" style="display: none;" alt="Aperçu de la photo à enregistrer" />
+      <div id="photoRotationControls" class="photo-rotation-controls" hidden>
+        <button type="button" id="rotateLeft" disabled aria-controls="photo">↶ Tourner à gauche</button>
+        <button type="button" id="rotateRight" disabled aria-controls="photo">↷ Tourner à droite</button>
+      </div>
+      <p id="photoStatus" class="photo-status" role="status" aria-live="polite" hidden></p>
       
       <!-- Date + Photo alignés en bas -->
       <div class="photo-info" id="photo-info" style="display: none;">
-      </br>
+      <br>
       <h4>Aperçu de la photo existante</h4>
         <img id="infoPhoto" src="" alt="Photo client" style="max-width: 300px; margin-top: 10px;">
+        <button type="button" id="editExistingPhoto" class="edit-existing-photo" disabled>Corriger cette photo</button>
         <p><strong>Date Prise photo :</strong> <span id="infoDate"></span></p>
       </div>
     </div>
@@ -78,9 +97,10 @@
   
       <button id="capture" disabled>📸 Prendre la photo</button>
       <button id="restart" style="display:none;">🔄 Reprendre la photo</button>
-      <button id="send">📤 Envoyer vers Oracle</button>  </div>
+      <button id="send" disabled>📤 Envoyer vers Oracle</button>  </div>
   </div>
   
-  <script src="script.js"></script>
+  </main>
+  <script src="/capture-photo.js?v=20261105-rotation"></script>
 </body>
 </html>

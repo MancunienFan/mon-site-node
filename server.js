@@ -5,7 +5,7 @@ const cors = require('cors');
 const path = require('path');
 const dbConfig = require('./dbConfig');
 const { getNomPrenomClient, enregistrerPhotoDansCOUTCLI } = require('./oracle/clientDB');
-const { closeConnection } = require('./oracle/dbSingleton');
+const connections = require('./oracle/sessionConnections');
 const { getLieux, getSommaire } = require('./oracle/sommaireDepotDB');
 const { genererSommaire } = require('./services/sommairePdf');
 
@@ -14,6 +14,7 @@ app.use(session({
   secret: 'monSecretSuperSecurise',
   resave: false,
   saveUninitialized: false,
+  rolling: true,
   cookie: { secure: false, httpOnly: true, maxAge: 1000 * 60 * 60 }
 }));
 app.use(cors());
@@ -28,28 +29,35 @@ function afficherLogin(req, res) {
 }
 
 function requireSession(req, res, next) {
-  if (req.session.user) return next();
+  if (req.session.user && connections.has(req.sessionID)) { connections.touch(req.sessionID); return next(); }
   return res.status(401).json({ error: 'Votre session a expiré. Veuillez vous reconnecter.' });
 }
+function oracleError(res, error) {
+  if (error.code === 'SESSION_ORACLE') return res.status(401).json({ error: 'Votre session Oracle a expiré. Veuillez vous reconnecter.' });
+  if (error.errorNum === 1031 || error.errorNum === 942) return res.status(403).json({ error: 'Accès Oracle refusé ou objet inaccessible pour votre compte.' });
+  return res.status(500).json({ error: 'Opération Oracle impossible.' });
+}
 
-app.get('/', afficherLogin);
+app.get('/', (req, res) => req.session.user && connections.has(req.sessionID) ? res.redirect('/sommaire-depot') : afficherLogin(req, res));
 app.get('/login', afficherLogin);
 app.get('/login.html', afficherLogin);
-app.get('/index', (req, res) => {
-  if (!req.session.user) return res.redirect('/login');
+app.get('/capture-photo', (req, res) => {
+  if (!req.session.user || !connections.has(req.sessionID)) return res.redirect('/login');
+  connections.touch(req.sessionID);
   res.set('Cache-Control', 'no-store');
-  res.render('index', { userName: req.session.user });
+  res.render('capture-photo', { userName: req.session.user });
 });
-app.get('/index.html', (req, res) => res.redirect('/index'));
+app.get(['/index', '/index.html'], (req, res) => res.redirect('/capture-photo'));
 app.get('/sommaire-depot', (req, res) => {
-  if (!req.session.user) return res.redirect('/login');
+  if (!req.session.user || !connections.has(req.sessionID)) return res.redirect('/login');
+  connections.touch(req.sessionID);
   res.set('Cache-Control', 'no-store');
   res.render('sommaire-depot', { userName: req.session.user });
 });
 
 // Seuls les identifiants viennent du formulaire : la destination reste dans dbConfig.js.
 app.post('/connect', async (req, res) => {
-  const user = typeof req.body.user === 'string' ? req.body.user.trim() : '';
+  const user = typeof req.body.user === 'string' ? req.body.user.trim().toUpperCase() : '';
   const password = req.body.password;
   if (!user || typeof password !== 'string' || !password) {
     return res.status(400).json({ success: false, message: 'Saisissez votre nom d’utilisateur et votre mot de passe.' });
@@ -58,26 +66,24 @@ app.post('/connect', async (req, res) => {
   let connection;
   try {
     connection = await oracledb.getConnection({ user, password, connectString: dbConfig.connectString });
-    await connection.close();
-    connection = null;
+    await connections.close(req.sessionID);
+    await new Promise((resolve, reject) => req.session.regenerate(error => error ? reject(error) : resolve()));
     req.session.user = user;
-    req.session.save((error) => {
-      if (error) {
-        return res.status(500).json({ success: false, message: 'Impossible d’ouvrir la session. Veuillez réessayer.' });
-      }
-      return res.json({ success: true });
-    });
+    await new Promise((resolve, reject) => req.session.save(error => error ? reject(error) : resolve()));
+    connections.register(req.sessionID, connection);
+    connection = null;
+    return res.json({ success: true });
   } catch (error) {
-    console.error('Connexion Oracle refusée :', error.message);
-    return res.status(error.errorNum === 1017 ? 401 : 500).json({ success: false, message: error.message });
+    return res.status(error.errorNum === 1017 ? 401 : 500).json({ success: false, message: 'Connexion impossible. Vérifiez vos identifiants ou réessayez.' });
   } finally {
     if (connection) {
-      try { await connection.close(); } catch (error) { console.error('Fermeture Oracle :', error.message); }
+      try { await connection.close(); } catch (error) { console.error('Fermeture Oracle impossible'); }
     }
   }
 });
 
-app.post('/logout', (req, res) => {
+app.post('/logout', async (req, res) => {
+  try { await connections.close(req.sessionID); } catch (_) { console.error('Fermeture Oracle impossible'); }
   req.session.destroy((error) => {
     if (error) return res.status(500).send('Impossible de fermer la session.');
     res.clearCookie('connect.sid');
@@ -87,7 +93,7 @@ app.post('/logout', (req, res) => {
 
 app.get('/clients/:id', requireSession, async (req, res) => {
   try {
-    const data = await getNomPrenomClient(req.params.id);
+    const data = await connections.run(req.sessionID, connection => getNomPrenomClient(connection, req.params.id));
     if (!data) return res.status(404).send('Client non trouvé');
     return res.json({
       nom: data.NM_CLI,
@@ -96,17 +102,15 @@ app.get('/clients/:id', requireSession, async (req, res) => {
       date: data.DT_PHOTO_PRISE
     });
   } catch (error) {
-    console.error('Lecture du client :', error.message);
-    return res.status(500).send('Erreur serveur');
+    return oracleError(res, error);
   }
 });
 
 app.get('/api/sommaire-depot/lieux', requireSession, async (req, res) => {
   try {
-    return res.json(await getLieux());
+    return res.json(await connections.run(req.sessionID, connection => getLieux(connection)));
   } catch (error) {
-    console.error('Lecture des lieux impossible');
-    return res.status(500).json({ error: 'Impossible de lire les lieux.' });
+    return oracleError(res, error);
   }
 });
 
@@ -118,10 +122,9 @@ app.get('/api/sommaire-depot', requireSession, async (req, res) => {
     return res.status(400).json({ error: 'Date ou lieu invalide.' });
   }
   try {
-    return res.json(await getSommaire(date_recu, endroit));
+    return res.json(await connections.run(req.sessionID, connection => getSommaire(connection, date_recu, endroit)));
   } catch (error) {
-    console.error('Lecture du sommaire impossible');
-    return res.status(500).json({ error: 'Impossible de lire le sommaire.' });
+    return oracleError(res, error);
   }
 });
 
@@ -130,8 +133,7 @@ app.get('/api/sommaire-depot/pdf', requireSession, async (req, res) => {
   const date = typeof date_recu === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date_recu) && new Date(date_recu + 'T00:00:00Z');
   if (!date || Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== date_recu || date_recu.startsWith('0000') || typeof endroit !== 'string' || !endroit.trim() || typeof bordereau !== 'string') return res.status(400).json({ error: 'Critères invalides.' });
   try {
-    const lieux = await getLieux();
-    const lignes = await getSommaire(date_recu, endroit);
+    const { lieux, lignes } = await connections.run(req.sessionID, async connection => ({ lieux: await getLieux(connection), lignes: await getSommaire(connection, date_recu, endroit) }));
     const lieu = lieux.find(l => String(l.CODE_LIEU) === endroit);
     if (!lieu) return res.status(400).json({ error: 'Lieu invalide.' });
     if (!lignes.length) return res.status(404).json({ error: 'Aucune donnée pour ces critères.' });
@@ -139,7 +141,7 @@ app.get('/api/sommaire-depot/pdf', requireSession, async (req, res) => {
     genererSommaire(res, lignes, { date_recu, bordereau, lieu: lieu.DESCRIPTION_LIEU || lieu.NOM_LIEU });
   } catch (error) {
     console.error('Génération du sommaire impossible');
-    if (!res.headersSent) return res.status(500).json({ error: 'Impossible de générer le PDF.' });
+    if (!res.headersSent) return oracleError(res, error);
     res.destroy();
   }
 });
@@ -147,14 +149,15 @@ app.get('/api/sommaire-depot/pdf', requireSession, async (req, res) => {
 app.post('/envoyer-photo', requireSession, async (req, res) => {
   const { id, image } = req.body;
   try {
-    await enregistrerPhotoDansCOUTCLI(id, image, req.session.user);
+    await connections.run(req.sessionID, connection => enregistrerPhotoDansCOUTCLI(connection, id, image, req.session.user));
     return res.send('✅ Photo insérée dans COUT_CLI !');
   } catch (error) {
-    return res.status(500).send('❌ Erreur : ' + error.message);
+    return oracleError(res, error);
   }
 });
 
 app.get('/test-session', (req, res) => res.json({ user: req.session.user || null }));
+app.get('/script.js', (req, res) => res.sendFile(path.join(__dirname, 'public', 'capture-photo.js')));
 app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
 function startServer() {
@@ -189,7 +192,10 @@ function startServer() {
     process.exitCode = 1;
   });
   process.once('SIGINT', async () => {
-    try { await closeConnection(); } finally { process.exit(0); }
+    try { await connections.closeAll(); } finally { process.exit(0); }
+  });
+  process.once('SIGTERM', async () => {
+    try { await connections.closeAll(); } finally { process.exit(0); }
   });
   server.listen(port);
   return server;
